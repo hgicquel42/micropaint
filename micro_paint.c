@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
+/*   micro_paint.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: hgicquel <hgicquel@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/12/20 11:14:51 by hgicquel          #+#    #+#             */
-/*   Updated: 2021/12/20 12:11:02 by hgicquel         ###   ########.fr       */
+/*   Updated: 2021/12/20 14:41:00 by hgicquel         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,7 +43,7 @@ int	ft_strlen(char *s)
 	return (i);
 }
 
-int	ft_putstr(char *s)
+void	ft_putstr(char *s)
 {
 	write(1, s, ft_strlen(s));
 }
@@ -65,7 +65,7 @@ int	ft_header(t_data *d)
 	int	l;
 	int	i;
 
-	if (fscanf(d->f, "%d %d %c\n", &d->w, &d->h, &d->b))
+	if (fscanf(d->f, "%d %d %c\n", &d->w, &d->h, &d->b) != 3)
 		return (0);
 	if (!d->w || d->w > 300)
 		return (0);
@@ -80,16 +80,78 @@ int	ft_header(t_data *d)
 	return (1);
 }
 
-int	ft_body(FILE *file, t_data *d)
+void	ft_print(t_data *d)
+{
+	int	i;
+
+	i = 0;
+	while (i < d->h)
+	{
+		write(1, d->p + (i * d->w), d->w);
+		write(1, "\n", 1);
+		i++;
+	}
+}
+
+int	ft_dist(t_line *l, float x, float y)
+{
+	if (x < l->x || x > l->x + l->w)
+		return (0);
+	if (y < l->y || y > l->y + l->h)
+		return (0);
+	if (x - l->x < 1 || l->x + l->w - x < 1)
+		return (1);
+	if (y - l->y < 1 || l->y + l->h - y < 1)
+		return (1);
+	return (2);
+}
+
+void	ft_fill(t_data *d, t_line *l)
+{
+	int	i;
+	int	j;
+	int	q;
+
+	i = 0;
+	while (i < d->w)
+	{
+		j = 0;
+		while (j < d->h)
+		{
+			q = ft_dist(l, i, j);
+			if (q == 1 || (q == 2 && l->t == 'R'))
+				d->p[i + j * d->w] = l->c;
+			j++;
+		}
+		i++;
+	}
+}
+
+int	ft_body(t_data *d)
 {
 	t_line	l;
+	int		r;
 
 	while (1)
 	{
-		if (fscanf(d->f, "%c %f %f %f %f %c\n", &l.t, &l.x, &l.y, &l.w, &l.h, &l.c))
+		r = fscanf(d->f, "%c %f %f %f %f %c\n", &l.t, &l.x, &l.y, &l.w, &l.h, &l.c);
+		if (r == -1)
+			return (1);
+		if (r != 6)
 			return (0);
-		
-	}	
+		if (l.t != 'r' && l.t != 'R')
+			return (0);
+		if (l.w <= 0 || l.h <= 0)
+			return (0);
+		ft_fill(d, &l);
+	}
+	return (0);
+}
+
+int	free0(void *p)
+{
+	free(p);
+	return (0);
 }
 
 int	main(int argc, char **argv)
@@ -102,5 +164,8 @@ int	main(int argc, char **argv)
 		return (ft_ioerr());
 	if (!ft_header(&data))
 		return (ft_ioerr());
-	return (0);
+	if (!ft_body(&data))
+		return (ft_ioerr() + free0(data.p));
+	ft_print(&data);
+	return (0 + free0(data.p));
 }
